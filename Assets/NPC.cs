@@ -5,60 +5,75 @@ using UnityEngine.AI;
 using UnityEngine.InputSystem;
 
 public enum CHARACTER_STATE {
-	IDLE,
-	PATROLLING_TO_1,
-	PATROLLING_TO_2
+	PATROLLING,
+	FOLLOW
 }
 
 
 public class NPC : MonoBehaviour
 {
-		public CHARACTER_STATE myCharacterState = CHARACTER_STATE.IDLE;
+	public CHARACTER_STATE myCharacterState = CHARACTER_STATE.PATROLLING;
 
-		public TextMeshProUGUI tmproObject;
+	public TextMeshProUGUI tmproObject;
 
-		public float upForce = 1.0f;
+	public float upForce = 1.0f;
 
-		public List<GameObject> targetPositions = new List<GameObject>();
+	public List<GameObject> targetPositions = new List<GameObject>();
+	public int targetPositionIndex = 0;
 
-    // Start is called before the first frame update
-    void Start()
-    {
-        Debug.Log("This is the Start Function");
-    }
+	public GameObject enemyGameObject;
 
-    // Update is called once per frame
-    void Update()
-    {
-				// change the states of the character state by keyboard
-				if (Keyboard.current[Key.Digit1].wasPressedThisFrame) {
-						myCharacterState = CHARACTER_STATE.IDLE;
+	public NavMeshAgent navMeshAgent;
+
+	// Start is called before the first frame update
+	void Start()
+	{
+		Debug.Log("This is the Start Function");
+
+		navMeshAgent = gameObject.GetComponent<NavMeshAgent>();
+
+
+	}
+
+	// Update is called once per frame
+	void Update()
+	{
+		switch (myCharacterState) {
+			case CHARACTER_STATE.PATROLLING:
+				Vector3 targetPos = targetPositions[targetPositionIndex].transform.position;
+				navMeshAgent.SetDestination(targetPos);
+
+				// Check if we've reached the destination
+				if (!navMeshAgent.pathPending) {
+					if (navMeshAgent.remainingDistance <= navMeshAgent.stoppingDistance) {
+						if (!navMeshAgent.hasPath || navMeshAgent.velocity.sqrMagnitude == 0f) {
+							Debug.Log("we have arrived!");
+							targetPositionIndex = targetPositionIndex + 1;
+							targetPositionIndex = targetPositionIndex % targetPositions.Count;
+						}
+					}
 				}
-				if (Keyboard.current[Key.Digit2].wasPressedThisFrame) {
-						myCharacterState = CHARACTER_STATE.PATROLLING_TO_1;
-				}
-				if (Keyboard.current[Key.Digit3].wasPressedThisFrame) {
-						myCharacterState = CHARACTER_STATE.PATROLLING_TO_2;
+
+				if ( Vector3.Distance(enemyGameObject.transform.position, gameObject.transform.position) < 3f) {
+					myCharacterState = CHARACTER_STATE.FOLLOW;
+					navMeshAgent.ResetPath();
 				}
 
-				// debug the informations to console and screen
-        Debug.Log($"This is the Update Function {myCharacterState}");
-				tmproObject.text = $"you set the value to {myCharacterState}";
-				
-				Vector3 targetPos;
+				break;
+			case CHARACTER_STATE.FOLLOW:
 
-				// do the different behaviours
-				switch (myCharacterState) {
-					case CHARACTER_STATE.IDLE:
-						break;
-					case CHARACTER_STATE.PATROLLING_TO_1:
-						targetPos = targetPositions[0].transform.position;
-						gameObject.GetComponent<NavMeshAgent>().SetDestination(targetPos);
-						break;
-					case CHARACTER_STATE.PATROLLING_TO_2:
-						targetPos = targetPositions[1].transform.position;
-						gameObject.GetComponent<NavMeshAgent>().SetDestination(targetPos);
-						break;
+				Vector3 enemyPos = enemyGameObject.transform.position;
+				navMeshAgent.SetDestination(enemyPos);
+
+				if ( Vector3.Distance(enemyGameObject.transform.position, gameObject.transform.position) > 5f) {
+					myCharacterState = CHARACTER_STATE.PATROLLING;
 				}
-    }
+
+
+				break;
+		}
+
+
+
+	}
 }
